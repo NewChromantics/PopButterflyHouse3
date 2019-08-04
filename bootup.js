@@ -542,19 +542,19 @@ let Params = {};
 Params.FogMinDistance = 20;
 Params.FogMaxDistance = 40;
 Params.FogColour = FogColour;
-Params.Debris_TriangleScale = DebrisMeta.TriangleScale;
+Params.TriangleScale = DebrisMeta.TriangleScale;
 
 let OnParamsChanged = function(Params)
 {
-	//Actor_Ocean.Meta.TriangleScale = Params.Ocean_TriangleScale;
+	Actor_Butterflys.Meta.TriangleScale = Params.TriangleScale;
 	//Actor_Debris.Meta.TriangleScale = Params.Debris_TriangleScale;
 }
 
 let ParamsWindow = new CreateParamsWindow(Params,OnParamsChanged);
 ParamsWindow.AddParam('FogMinDistance',0,30);
 ParamsWindow.AddParam('FogMaxDistance',0,30);
-ParamsWindow.AddParam('Ocean_TriangleScale',0,0.2);
-ParamsWindow.AddParam('Debris_TriangleScale',0,0.2);
+ParamsWindow.AddParam('TriangleScale',0,0.2);
+ParamsWindow.AddParam('FogColour','Colour');
 
 
 function RenderActor(RenderTarget,Actor,Time)
@@ -606,7 +606,7 @@ function Render(RenderTarget)
 	
 	Actor_Butterflys.PhysicsIteration( DurationSecs, GlobalTime, RenderTarget );
 
-	RenderTarget.ClearColour( FogColour[0],FogColour[1],FogColour[2] );
+	RenderTarget.ClearColour( ...Params.FogColour );
 	
 	RenderActor( RenderTarget, Actor_Butterflys, GlobalTime );
 }

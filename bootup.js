@@ -11,6 +11,7 @@ Pop.Include('PopEngineCommon/PopPly.js');
 Pop.Include('PopEngineCommon/PopObj.js');
 Pop.Include('PopEngineCommon/PopTexture.js');
 Pop.Include('PopEngineCommon/ParamsWindow.js');
+Pop.Include('PopEngineCommon/PopCamera.js');
 
 const ParticleTrianglesVertShader = Pop.LoadFileAsString('ParticleTriangles.vert.glsl');
 const QuadVertShader = Pop.LoadFileAsString('Quad.vert.glsl');
@@ -277,217 +278,16 @@ function UnrollHexToRgb(Hexs)
 }
 
 //	colours from colorbrewer2.org
-const OceanColoursHex = ['#c9e7f2','#4eb3d3','#2b8cbe','#0868ac','#084081','#023859','#03658c','#218da6','#17aebf','#15bfbf'];
-const DebrisColoursHex = ['#084081','#0868ac'];
+const DebrisColoursHex = ['#f08f11'];
 //const OceanColoursHex = ['#f7fcf0','#e0f3db','#ccebc5','#a8ddb5','#7bccc4','#4eb3d3','#2b8cbe','#0868ac','#084081'];
-const OceanColours = UnrollHexToRgb(OceanColoursHex);
-const ShellColoursHex = [0xF2BF5E,0xF28705,0xBF5B04,0x730c02,0xc2ae8f,0x9A7F5F,0xbfb39b,0x5B3920,0x755E47,0x7F6854,0x8B7361,0xBF612A,0xD99873,0x591902,0xA62103];
-const ShellColours = UnrollHexToRgb(ShellColoursHex);
-const FogColour = HexToRgbf(0x000000);
+const FogColour = HexToRgbf(0xabe6f5);
 const LightColour = HexToRgbf(0xeef2df);//HexToRgbf(0x9ee5fa);
 
 const DebrisColours = UnrollHexToRgb(DebrisColoursHex);
 
-let Camera = {};
-Camera.Position = [ 0,1,17 ];
-Camera.LookAt = [ 0,0,0 ];
-Camera.Aperture = 0.1;
-Camera.LowerLeftCorner = [0,0,0];
-Camera.DistToFocus = 1;
-Camera.Horizontal = [0,0,0];
-Camera.Vertical = [0,0,0];
-Camera.LensRadius = 1;
-Camera.Aperture = 0.015;
-Camera.VerticalFieldOfView = 45;
-Camera.NearDistance = 0.01;
-Camera.FarDistance = 100;
 
-function vec3_length(v)
-{
-	return Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-}
-
-function vec3_squared_length(v)
-{
-	return v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-}
-
-function vec3_multiply(v1,n)
-{
-	let x = v1[0] * n;
-	let y = v1[1] * n;
-	let z = v1[2] * n;
-	return [x,y,z];
-}
-
-function vec3_multiply_float(v1,n)
-{
-	let x = v1[0] * n;
-	let y = v1[1] * n;
-	let z = v1[2] * n;
-	return [x,y,z];
-}
-
-function vec3_multiply_vec(v1,v2)
-{
-	let x = v1[0] * v2[0];
-	let y = v1[1] * v2[1];
-	let z = v1[2] * v2[2];
-	return [x,y,z];
-}
-
-function vec3_divide(v1,n)
-{
-	let x = v1[0] / n;
-	let y = v1[1] / n;
-	let z = v1[2] / n;
-	return [x,y,z];
-}
-
-function vec3_divide_float(v1,n)
-{
-	let x = v1[0] / n;
-	let y = v1[1] / n;
-	let z = v1[2] / n;
-	return [x,y,z];
-}
-
-function vec3_add_vec(v1,v2)
-{
-	let x = v1[0] + v2[0];
-	let y = v1[1] + v2[1];
-	let z = v1[2] + v2[2];
-	return [x,y,z];
-}
-
-function vec3_subtract_vec(v1, v2)
-{
-	let x = v1[0] - v2[0];
-	let y = v1[1] - v2[1];
-	let z = v1[2] - v2[2];
-	return [x,y,z];
-}
-
-function vec3_subtract_float(v1,n)
-{
-	let x = v1[0] - n;
-	let y = v1[1] - n;
-	let z = v1[2] - n;
-	return [x,y,z];
-}
-
-function unit_vector(v1)
-{
-	let v_ = vec3_divide_float(v1, vec3_length(v1));
-	return v_;
-}
-
-function vec3_dot(v1,v2)
-{
-	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
-}
-
-function vec3_cross(v1,v2)
-{
-	let x = v1[1] * v2[2] - v1[2] * v2[1];
-	let y = - (v1[0] * v2[2] - v1[2] * v2[0]);
-	let z = v1[0] * v2[1] - v1[1] * v2[0];
-	return [x,y,z];
-}
-
-function camera_pos(cam,vup,vfov,aspect,focus_dist)
-{
-	const M_PI = 3.1415926535897932384626433832795;
-
-	let aperture = cam.Aperture;
-	
-	cam.LensRadius = aperture / 2.0;
-	let theta = vfov * M_PI / 180.0;
-	let half_height = Math.tan (theta / 2.0);
-	let half_width = aspect * half_height;
-	cam.w = unit_vector( vec3_subtract_vec( cam.Position, cam.LookAt ) );
-	cam.u = unit_vector( vec3_cross( vup, cam.w ) );
-	cam.v = vec3_cross( cam.w, cam.u );
-	cam.LowerLeftCorner =
-	vec3_subtract_vec(
-					  vec3_subtract_vec(
-										vec3_subtract_vec( cam.Position,
-														  vec3_multiply_float( cam.u, half_width * focus_dist )),
-										vec3_multiply_float( cam.v, half_height * focus_dist )),
-					  vec3_multiply_float( cam.w, focus_dist ));
-	cam.Horizontal  = vec3_multiply_float( cam.u,  2 * half_width * focus_dist );
-	cam.Vertical  = vec3_multiply_float( cam.v, 2 * half_height * focus_dist );
-}
-
-
-function perspective(out, fovy, aspect, near, far)
-{
-	var f = 1.0 / Math.tan( Math.radians(fovy) / 2);
-	var nf = 1 / (near - far);
-	
-	out = out || [];
-	out[0] = f / aspect;
-	out[1] = 0;
-	out[2] = 0;
-	out[3] = 0;
-	out[4] = 0;
-	out[5] = f;
-	out[6] = 0;
-	out[7] = 0;
-	out[8] = 0;
-	out[9] = 0;
-	out[10] = (far + near) * nf;
-	out[11] = -1;
-	out[12] = 0;
-	out[13] = 0;
-	out[14] = 2 * far * near * nf;
-	out[15] = 0;
-	return out;
-}
-
-function UpdateCamera(RenderTarget)
-{
-	let Rect = RenderTarget.GetScreenRect();
-	RenderTarget.GetWidth = function(){	return Rect[2]; };
-	RenderTarget.GetHeight = function(){	return Rect[3]; };
-	
-	Camera.DistToFocus = vec3_length( vec3_subtract_vec( Camera.Position, Camera.LookAt ) );
-	
-	let Up = [0,1,0];
-	let Aspect = RenderTarget.GetWidth() / RenderTarget.GetHeight();
-	
-	camera_pos( Camera, Up, Camera.VerticalFieldOfView, Aspect, Camera.DistToFocus );
-	
-	Camera.ProjectionMatrix = perspective( [], Camera.VerticalFieldOfView, Aspect, Camera.NearDistance, Camera.FarDistance );
-	
-}
-
-function OnCameraPan(x,y,FirstClick)
-{
-	if ( FirstClick )
-		Camera.LastPanPos = [x,y];
-	
-	let Deltax = Camera.LastPanPos[0] - x;
-	let Deltay = Camera.LastPanPos[1] - y;
-	Camera.Position[0] += Deltax * 0.01
-	Camera.Position[1] -= Deltay * 0.01
-	
-	Camera.LastPanPos = [x,y];
-}
-
-function OnCameraZoom(x,y,FirstClick)
-{
-	if ( FirstClick )
-		Camera.LastZoomPos = [x,y];
-	
-	let Deltax = Camera.LastZoomPos[0] - x;
-	let Deltay = Camera.LastZoomPos[1] - y;
-	//Camera.Position[0] -= Deltax * 0.01
-	Camera.Position[2] -= Deltay * 0.01
-	
-	Camera.LastZoomPos = [x,y];
-}
-
+let Camera = new Pop.Camera();
+Camera.Position = [ 0,1,5 ];
 
 function TKeyframe(Time,Uniforms)
 {
@@ -632,12 +432,6 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 
 
 
-
-//const SeaWorldPositionsPlyFilename = 'seatest.ply';
-//const SeaWorldPositionsPlyFilename = 'Shell/shellSmall.ply';
-const SeaWorldPositionsPlyFilename = 'Shell/shellFromBlender.obj';
-
-
 function TPhysicsActor(Meta)
 {
 	this.Position = Meta.Position;
@@ -692,6 +486,11 @@ function TPhysicsActor(Meta)
 		this.ScratchTexture = new Pop.Image(Size,'Float4');
 	}
 	
+	this.GetTransformMatrix = function()
+	{
+		return Math.CreateTranslationMatrix( ...this.Position );
+	}
+	
 	this.GetPositionsTexture = function()
 	{
 		return this.PositionTexture;
@@ -710,152 +509,45 @@ function TPhysicsActor(Meta)
 	}
 }
 
-function TAnimationBuffer(Filenames,Scale)
-{
-	this.Frames = null;
-	
-	this.Init = function(RenderTarget)
-	{
-		if ( this.Frames )
-			return;
-		
-		let LoadFrame = function(Filename,Index)
-		{
-			let FrameDuration = 1/20;
-			let Frame = {};
-			Frame.Time = Index * FrameDuration;
-			Frame.PositionTexture = new Pop.Image();
-			Frame.TriangleBuffer = LoadPlyGeometry( RenderTarget, Filename, Frame.PositionTexture, Scale );
-			this.Frames.push(Frame);
-		}
-
-		this.Frames = [];
-		Filenames.forEach( LoadFrame.bind(this) );
-	}
-	
-	this.GetDuration = function()
-	{
-		return this.Frames[this.Frames.length-1].Time;
-	}
-	
-	this.GetFrame = function(Time)
-	{
-		Time = Time % this.GetDuration();
-		for ( let i=0;	i<this.Frames.length;	i++ )
-		{
-			let Frame = this.Frames[i];
-			if ( Time <= Frame.Time )
-				return Frame;
-		}
-		throw "Failed to find frame for time " + Time;
-	}
-	
-	this.GetTriangleBuffer = function(Time)
-	{
-		const Frame = this.GetFrame(Time);
-		return Frame.TriangleBuffer;
-	}
-	
-	this.GetPositionsTexture = function(Time)
-	{
-		const Frame = this.GetFrame(Time);
-		return Frame.PositionTexture;
-	}
-	
-}
-
-
-function TAnimatedActor(Meta)
-{
-	this.Position = Meta.Position;
-	this.Animation = new TAnimationBuffer(Meta.Filename,Meta.Scale);
-	this.TriangleBuffer = null;
-	this.Colours = Meta.Colours;
-	this.Time = 0;
-	this.Meta = Meta;
-	
-	this.PhysicsIteration = function(DurationSecs,Time,RenderTarget)
-	{
-		this.Animation.Init(RenderTarget);
-		this.Time = Time;
-	}
-	
-	this.GetTriangleBuffer = function(RenderTarget)
-	{
-		const tb = this.Animation.GetTriangleBuffer( this.Time );
-		return tb;
-	}
-
-	this.GetPositionsTexture = function(RenderTarget)
-	{
-		const tb = this.Animation.GetPositionsTexture( this.Time );
-		return tb;
-	}
-}
-
 
 
 const Keyframes =
 [
- new TKeyframe(	0,		{	ShellAlpha:0,	PhysicsStep:1/60,	Timeline_CameraPosition:[0,0,	 0]	} ),
- new TKeyframe(	10,		{	ShellAlpha:0,	PhysicsStep:1/60,	Timeline_CameraPosition:[0,-0.20, -5]	} ),
- new TKeyframe(	20,		{	ShellAlpha:0,	PhysicsStep:1/60,	Timeline_CameraPosition:[0,-3.30, -10]	} ),
- new TKeyframe(	28.9,	{	ShellAlpha:0,	PhysicsStep:1/60,	Timeline_CameraPosition:[0,-3.40, -10.1]	} ),
- new TKeyframe(	40,		{	ShellAlpha:1,	PhysicsStep:1/60,	Timeline_CameraPosition:[0,-3.50, -10.2]	} ),
- new TKeyframe(	50,		{	ShellAlpha:1,	PhysicsStep:1/60,	Timeline_CameraPosition:[0,-3.55, -11]	} ),
- new TKeyframe(	110,	{	ShellAlpha:1,	PhysicsStep:1/60,	Timeline_CameraPosition:[0,-3.60, -16]	} ),
+ new TKeyframe(	0,		{	} ),
+ new TKeyframe(	10,		{	} ),
+ new TKeyframe(	20,		{	} ),
+ new TKeyframe(	28.9,	{	} ),
+ new TKeyframe(	40,		{	} ),
+ new TKeyframe(	50,		{	} ),
+ new TKeyframe(	110,	{	} ),
 ];
 const Timeline = new TTimeline( Keyframes );
 
-let OceanFilenames = [];
-for ( let i=1;	i<=96;	i++ )
-//for ( let i=1;	i<=2;	i++ )
-	OceanFilenames.push('Ocean/ocean_pts.' + (''+i).padStart(4,'0') + '.ply');
-
-let ShellMeta = {};
-ShellMeta.Filename = 'Shell/shellFromBlender.obj';
-ShellMeta.Position = [0,-3,7];
-ShellMeta.Scale = 0.9;
-ShellMeta.TriangleScale = 0.03;
-ShellMeta.Colours = ShellColours;
-ShellMeta.VertexSkip = 0;
 
 let DebrisMeta = {};
 DebrisMeta.Filename = '.random';
-DebrisMeta.Position = [0,-10,0];
-DebrisMeta.Scale = 20;
-DebrisMeta.TriangleScale = 0.015;
+DebrisMeta.Position = [0,0,0];
+DebrisMeta.Scale = 1;
+DebrisMeta.TriangleScale = 0.10;
 DebrisMeta.Colours = DebrisColours;
 DebrisMeta.VertexSkip = 0;
 
-
-let OceanMeta = {};
-OceanMeta.Filename = OceanFilenames;
-OceanMeta.Position = [0,0,0];
-OceanMeta.Scale = 1.0;
-OceanMeta.TriangleScale = 0.03;
-OceanMeta.Colours = OceanColours;
-
-//let Actor_Shell = new TPhysicsActor( ShellMeta );
-let Actor_Shell = null;
-let Actor_Ocean = new TAnimatedActor( OceanMeta );
-let Actor_Debris = new TPhysicsActor( DebrisMeta );
+let Actor_Butterflys = new TPhysicsActor( DebrisMeta );
 let RandomTexture = Pop.CreateRandomImage( 1024, 1024 );
 
 
 
 let Params = {};
 //	todo: radial vs ortho etc
-Params.FogMinDistance = 1;
-Params.FogMaxDistance = 18;
+Params.FogMinDistance = 20;
+Params.FogMaxDistance = 40;
 Params.FogColour = FogColour;
-Params.Ocean_TriangleScale = OceanMeta.TriangleScale;
 Params.Debris_TriangleScale = DebrisMeta.TriangleScale;
 
 let OnParamsChanged = function(Params)
 {
-	Actor_Ocean.Meta.TriangleScale = Params.Ocean_TriangleScale;
-	Actor_Debris.Meta.TriangleScale = Params.Debris_TriangleScale;
+	//Actor_Ocean.Meta.TriangleScale = Params.Ocean_TriangleScale;
+	//Actor_Debris.Meta.TriangleScale = Params.Debris_TriangleScale;
 }
 
 let ParamsWindow = new CreateParamsWindow(Params,OnParamsChanged);
@@ -870,23 +562,30 @@ function RenderActor(RenderTarget,Actor,Time)
 	if ( !Actor )
 		return;
 	
+	const Viewport = RenderTarget.GetScreenRect();
+	const CameraProjectionTransform = Camera.GetProjectionMatrix(Viewport);
+	const WorldToCameraTransform = Camera.GetWorldToCameraMatrix();
 	const Shader = Pop.GetShader( RenderTarget, ParticleColorShader, ParticleTrianglesVertShader );
 	const TriangleBuffer = Actor.GetTriangleBuffer(RenderTarget);
 	const PositionsTexture = Actor.GetPositionsTexture();
 
+	Pop.Debug("CameraProjectionTransform",CameraProjectionTransform);
+	Pop.Debug("WorldToCameraTransform",WorldToCameraTransform);
+	Pop.Debug('LocalToWorldTransform', Actor.GetTransformMatrix() );
+	
 	let SetUniforms = function(Shader)
 	{
 		Shader.SetUniform('WorldPositions',PositionsTexture);
 		Shader.SetUniform('WorldPositionsWidth',PositionsTexture.GetWidth());
 		Shader.SetUniform('WorldPositionsHeight',PositionsTexture.GetHeight());
-	
-		Shader.SetUniform('Transform_WorldPosition', Actor.Position);
+		
+		Shader.SetUniform('LocalToWorldTransform', Actor.GetTransformMatrix() );
 		Shader.SetUniform('TriangleScale', Actor.Meta.TriangleScale);
 		
 		Shader.SetUniform('Colours',Actor.Colours);
 		Shader.SetUniform('ColourCount',Actor.Colours.length/3);
-		Shader.SetUniform('CameraProjectionMatrix', Camera.ProjectionMatrix );
-		Shader.SetUniform('CameraWorldPosition',Camera.Position);
+		Shader.SetUniform('WorldToCameraTransform', WorldToCameraTransform );
+		Shader.SetUniform('CameraProjectionTransform', CameraProjectionTransform );
 		Shader.SetUniform('Fog_MinDistance',Params.FogMinDistance);
 		Shader.SetUniform('Fog_MaxDistance',Params.FogMaxDistance);
 		Shader.SetUniform('Fog_Colour',Params.FogColour);
@@ -902,47 +601,28 @@ function RenderActor(RenderTarget,Actor,Time)
 let GlobalTime = 0;
 function Render(RenderTarget)
 {
-	UpdateCamera(RenderTarget);
-
 	const DurationSecs = 1 / 60;
 	GlobalTime += DurationSecs;
 	
-	//	update physics
-	if ( Actor_Shell )
-		Actor_Shell.PhysicsIteration( DurationSecs, GlobalTime, RenderTarget );
-	if ( Actor_Ocean )
-		Actor_Ocean.PhysicsIteration( DurationSecs, GlobalTime, RenderTarget );
-	if ( Actor_Debris )
-		Actor_Debris.PhysicsIteration( DurationSecs, GlobalTime, RenderTarget );
+	Actor_Butterflys.PhysicsIteration( DurationSecs, GlobalTime, RenderTarget );
 
 	RenderTarget.ClearColour( FogColour[0],FogColour[1],FogColour[2] );
 	
-	let ShellAlpha = Timeline.GetUniform(GlobalTime,'ShellAlpha');
-	if ( ShellAlpha > 0.5 )
-		RenderActor( RenderTarget, Actor_Shell, GlobalTime );
-	
-	if ( Actor_Debris )
-		RenderActor( RenderTarget, Actor_Debris, GlobalTime );
-
-	RenderActor( RenderTarget, Actor_Ocean, GlobalTime );
+	RenderActor( RenderTarget, Actor_Butterflys, GlobalTime );
 }
 
-let Window = new Pop.Opengl.Window("Tarqunder the sea");
+let Window = new Pop.Opengl.Window("Flutterbys");
 Window.OnRender = Render;
 
 Window.OnMouseDown = function(x,y,Button)
 {
-	if ( Button == 0 )
-		OnCameraPan( x, y, true );
-	if ( Button == 1 )
-		OnCameraZoom( x, y, true );
+	Camera.OnCameraOrbit( x, y, 0, true );
 }
 
 Window.OnMouseMove = function(x,y,Button)
 {
-	if ( Button == 0 )
-		OnCameraPan( x, y, false );
-	if ( Button == 1 )
-		OnCameraZoom( x, y, false );
+	//	gr: we should change Button to undefined, not -1
+	if ( Button >= 0 && Button !== undefined )
+		Camera.OnCameraOrbit( x, y, 0, false );
 };
 

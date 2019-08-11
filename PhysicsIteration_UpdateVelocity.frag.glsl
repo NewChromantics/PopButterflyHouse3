@@ -126,6 +126,9 @@ void main()
 	Vel.xyz += GetNoise(uv) * PhysicsStep;
 	Vel.xyz += GetGravity(uv) * PhysicsStep;
 	
+	//Vel.xyz = float3(0,0,0);
+	
+	Vel.w = 1.0;
 	gl_FragColor = Vel;
 }
 

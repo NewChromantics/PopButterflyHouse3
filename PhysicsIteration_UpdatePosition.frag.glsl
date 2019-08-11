@@ -11,7 +11,6 @@ void main()
 	vec4 Pos = texture2D( LastPositions, uv );
 	vec4 Vel = texture2D( Velocitys, uv );
 	Pos += Vel * PhysicsStep;
-		
 	Pos.w = 1.0;
 	gl_FragColor = Pos;
 }

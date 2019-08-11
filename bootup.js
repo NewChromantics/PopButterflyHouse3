@@ -505,6 +505,11 @@ function TPhysicsActor(Meta)
 		return this.PositionTexture;
 	}
 	
+	this.GetVelocitysTexture = function()
+	{
+		return this.VelocityTexture;
+	}
+	
 	this.GetTriangleBuffer = function(RenderTarget)
 	{
 		if ( this.TriangleBuffer )
@@ -577,7 +582,9 @@ function RenderActor(RenderTarget,Actor,Time)
 	const Shader = Pop.GetShader( RenderTarget, ParticleColorShader, ParticleTrianglesVertShader );
 	const TriangleBuffer = Actor.GetTriangleBuffer(RenderTarget);
 	const PositionsTexture = Actor.GetPositionsTexture();
-
+	const VelocitysTexture = Actor.GetVelocitysTexture();
+	const BlitShader = Pop.GetShader( RenderTarget, BlitCopyShader, QuadVertShader );
+	
 	//Pop.Debug("CameraProjectionTransform",CameraProjectionTransform);
 	//Pop.Debug("WorldToCameraTransform",WorldToCameraTransform);
 	//Pop.Debug('LocalToWorldTransform', Actor.GetTransformMatrix() );
@@ -610,6 +617,21 @@ function RenderActor(RenderTarget,Actor,Time)
 	};
 	
 	RenderTarget.DrawGeometry( TriangleBuffer, Shader, SetUniforms );
+	
+	
+	let Quad = GetQuadGeometry(RenderTarget);
+	let SetDebugPositionsUniforms = function(Shader)
+	{
+		Shader.SetUniform('VertexRect', [0,0,0.2,0.4] );
+		Shader.SetUniform('Texture',PositionsTexture);
+	};
+	let SetDebugVelocitysUniforms = function(Shader)
+	{
+		Shader.SetUniform('VertexRect', [0,0.4,0.2,0.4] );
+		Shader.SetUniform('Texture',VelocitysTexture);
+	};
+	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugPositionsUniforms );
+	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugVelocitysUniforms );
 }
 
 
@@ -624,6 +646,7 @@ function Render(RenderTarget)
 	RenderTarget.ClearColour( ...Params.FogColour );
 	
 	RenderActor( RenderTarget, Actor_Butterflys, GlobalTime );
+	
 }
 
 let Window = new Pop.Opengl.Window("Flutterbys", [10,10,600,240] );

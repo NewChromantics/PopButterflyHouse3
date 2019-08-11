@@ -44,7 +44,7 @@ vec3 GetTriangleWorldPos(int TriangleIndex)
 	float Lod = 0.0;
 	float2 uv = float2(u,v);
 	float3 xyz = textureLod( WorldPositions, uv, Lod ).xyz;
-	//float3 xyz = float3( x,y,0 );
+	//xyz = float3( x,y,0 );
 	return xyz;
 }
 

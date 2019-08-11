@@ -428,14 +428,14 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 		{
 			Shader.SetUniform('VertexRect', [0,0,1,1] );
 			Shader.SetUniform('PhysicsStep', 1.0/60.0 );
-			Shader.SetUniform('Velocitys',Velocitys);
+			Shader.SetUniform('Velocitys',VelocityTexture);
 			Shader.SetUniform('LastPositions',ScratchTexture);
 			
 			Timeline.EnumUniforms( Time, Shader.SetUniform.bind(Shader) );
 		}
 		RenderTarget.DrawGeometry( Quad, UpdatePositionsShader, SetUniforms );
 	}
-	RenderTarget.RenderToRenderTarget( PositionTexture, UpdateVelocitys );
+	RenderTarget.RenderToRenderTarget( PositionTexture, UpdatePositions );
 	
 }
 
@@ -542,7 +542,7 @@ DebrisMeta.Colours = DebrisColours;
 DebrisMeta.VertexSkip = 0;
 
 let Actor_Butterflys = new TPhysicsActor( DebrisMeta );
-let RandomTexture = Pop.CreateRandomImage( 1024, 1024 );
+let RandomTexture = Pop.CreateRandomImage( 512, 512 );
 
 
 
@@ -626,7 +626,7 @@ function Render(RenderTarget)
 	RenderActor( RenderTarget, Actor_Butterflys, GlobalTime );
 }
 
-let Window = new Pop.Opengl.Window("Flutterbys");
+let Window = new Pop.Opengl.Window("Flutterbys", [10,10,600,240] );
 Window.OnRender = Render;
 
 Window.OnMouseDown = function(x,y,Button)

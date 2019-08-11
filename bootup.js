@@ -184,6 +184,7 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 		
 		const Width = 1024;
 		const Height = Math.ceil( WorldPositions.length / WorldPositionSize / Width );
+		//const Height = 10;	//	seeing if this needs to be a power in webgl for framebuffer)
 		let WorldPixels = new Float32Array( Channels * Width*Height );
 		//WorldPositions.copyWithin( WorldPixels );
 		
@@ -211,6 +212,7 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 			WorldPixels[Index*Channels+0] = xyz[0];
 			WorldPixels[Index*Channels+1] = xyz[1];
 			WorldPixels[Index*Channels+2] = xyz[2];
+			//WorldPixels[Index*Channels+3] = 0;
 			ModifyXyz( Index );
 		}
 		for ( let i=0;	i<WorldPositions.length;	i+=WorldPositionSize )
@@ -222,7 +224,7 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 		//Pop.Debug("Making world positions took", Pop.GetTimeNowMs()-WorldPosTime);
 
 		//let WriteTime = Pop.GetTimeNowMs();
-		WorldPositionImage.WritePixels( Width, Height, WorldPixels, 'Float3' );
+		WorldPositionImage.WritePixels( Width, Height, WorldPixels, 'Float'+Channels );
 		//Pop.Debug("Making world texture took", Pop.GetTimeNowMs()-WriteTime);
 	}
 	
@@ -583,6 +585,7 @@ function RenderActor(RenderTarget,Actor,Time)
 	const TriangleBuffer = Actor.GetTriangleBuffer(RenderTarget);
 	const PositionsTexture = Actor.GetPositionsTexture();
 	const VelocitysTexture = Actor.GetVelocitysTexture();
+	const ScratchTexture = Actor.ScratchTexture;
 	const BlitShader = Pop.GetShader( RenderTarget, BlitCopyShader, QuadVertShader );
 	
 	//Pop.Debug("CameraProjectionTransform",CameraProjectionTransform);
@@ -622,16 +625,23 @@ function RenderActor(RenderTarget,Actor,Time)
 	let Quad = GetQuadGeometry(RenderTarget);
 	let SetDebugPositionsUniforms = function(Shader)
 	{
-		Shader.SetUniform('VertexRect', [0,0,0.2,0.4] );
+		Shader.SetUniform('VertexRect', [0, 0, 0.2, 0.25 ] );
 		Shader.SetUniform('Texture',PositionsTexture);
 	};
 	let SetDebugVelocitysUniforms = function(Shader)
 	{
-		Shader.SetUniform('VertexRect', [0,0.4,0.2,0.4] );
+		Shader.SetUniform('VertexRect', [0, 0.3, 0.2, 0.25 ] );
 		Shader.SetUniform('Texture',VelocitysTexture);
 	};
+	let SetDebugScratchTextureUniforms = function(Shader)
+	{
+		Shader.SetUniform('VertexRect', [0, 0.6, 0.2, 0.25 ] );
+		Shader.SetUniform('Texture',ScratchTexture);
+	};
+	
 	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugPositionsUniforms );
 	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugVelocitysUniforms );
+	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugScratchTextureUniforms );
 }
 
 

@@ -555,6 +555,7 @@ let RandomTexture = Pop.CreateRandomImage( 512, 512 );
 
 let Params = {};
 //	todo: radial vs ortho etc
+Params.DebugPhysicsTextures = false;
 Params.FogMinDistance = 20;
 Params.FogMaxDistance = 40;
 Params.FogColour = FogColour;
@@ -567,6 +568,7 @@ let OnParamsChanged = function(Params)
 }
 
 let ParamsWindow = new CreateParamsWindow(Params,OnParamsChanged);
+ParamsWindow.AddParam('DebugPhysicsTextures');
 ParamsWindow.AddParam('FogMinDistance',0,30);
 ParamsWindow.AddParam('FogMaxDistance',0,30);
 ParamsWindow.AddParam('TriangleScale',0,0.2);
@@ -621,29 +623,30 @@ function RenderActor(RenderTarget,Actor,Time)
 	
 	RenderTarget.DrawGeometry( TriangleBuffer, Shader, SetUniforms );
 	
-	
-	let Quad = GetQuadGeometry(RenderTarget);
-	let SetDebugPositionsUniforms = function(Shader)
+	if ( Params.DebugPhysicsTextures )
 	{
-		Shader.SetUniform('VertexRect', [0, 0, 0.2, 0.25 ] );
-		Shader.SetUniform('Texture',PositionsTexture);
-	};
-	let SetDebugVelocitysUniforms = function(Shader)
-	{
-		Shader.SetUniform('VertexRect', [0, 0.3, 0.2, 0.25 ] );
-		Shader.SetUniform('Texture',VelocitysTexture);
-	};
-	let SetDebugScratchTextureUniforms = function(Shader)
-	{
-		Shader.SetUniform('VertexRect', [0, 0.6, 0.2, 0.25 ] );
-		Shader.SetUniform('Texture',ScratchTexture);
-	};
-	
-	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugPositionsUniforms );
-	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugVelocitysUniforms );
-	RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugScratchTextureUniforms );
+		let Quad = GetQuadGeometry(RenderTarget);
+		let SetDebugPositionsUniforms = function(Shader)
+		{
+			Shader.SetUniform('VertexRect', [0, 0, 0.2, 0.25 ] );
+			Shader.SetUniform('Texture',PositionsTexture);
+		};
+		let SetDebugVelocitysUniforms = function(Shader)
+		{
+			Shader.SetUniform('VertexRect', [0, 0.3, 0.2, 0.25 ] );
+			Shader.SetUniform('Texture',VelocitysTexture);
+		};
+		let SetDebugScratchTextureUniforms = function(Shader)
+		{
+			Shader.SetUniform('VertexRect', [0, 0.6, 0.2, 0.25 ] );
+			Shader.SetUniform('Texture',ScratchTexture);
+		};
+		
+		RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugPositionsUniforms );
+		RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugVelocitysUniforms );
+		RenderTarget.DrawGeometry( Quad, BlitShader, SetDebugScratchTextureUniforms );
+	}
 }
-
 
 let GlobalTime = 0;
 function Render(RenderTarget)

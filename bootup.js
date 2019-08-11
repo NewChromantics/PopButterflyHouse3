@@ -662,7 +662,7 @@ function Render(RenderTarget)
 	
 }
 
-let Window = new Pop.Opengl.Window("Flutterbys", [10,10,600,240] );
+let Window = new Pop.Opengl.Window("Flutterbys"/*, [10,10,300,300]*/ );
 Window.OnRender = Render;
 
 Window.OnMouseDown = function(x,y,Button)

@@ -252,8 +252,9 @@ function GetQuadGeometry(RenderTarget)
 	let t = 0;
 	let r = 1;
 	let b = 1;
-	let VertexData = [	l,t,	r,t,	r,b,	l,b	];
-	let TriangleIndexes = [0,1,2,	2,3,0];
+	//let VertexData = [	l,t,	r,t,	r,b,	l,b	];
+	let VertexData = [	l,t,	r,t,	r,b,	r,b, l,b, l,t	];
+	let TriangleIndexes = [0,1,2,	3,4,5];
 	
 	const VertexAttributeName = "TexCoord";
 	
@@ -268,7 +269,7 @@ function UnrollHexToRgb(Hexs)
 	let Rgbs = [];
 	let PushRgb = function(Hex)
 	{
-		let Rgb = HexToRgb(Hex);
+		let Rgb = Pop.Colour.HexToRgb(Hex);
 		Rgbs.push( Rgb[0]/255 );
 		Rgbs.push( Rgb[1]/255 );
 		Rgbs.push( Rgb[2]/255 );
@@ -280,8 +281,8 @@ function UnrollHexToRgb(Hexs)
 //	colours from colorbrewer2.org
 const DebrisColoursHex = ['#f08f11'];
 //const OceanColoursHex = ['#f7fcf0','#e0f3db','#ccebc5','#a8ddb5','#7bccc4','#4eb3d3','#2b8cbe','#0868ac','#084081'];
-const FogColour = HexToRgbf(0xabe6f5);
-const LightColour = HexToRgbf(0xeef2df);//HexToRgbf(0x9ee5fa);
+const FogColour = Pop.Colour.HexToRgbf(0xabe6f5);
+const LightColour = Pop.Colour.HexToRgbf(0xeef2df);//HexToRgbf(0x9ee5fa);
 
 const DebrisColours = UnrollHexToRgb(DebrisColoursHex);
 
@@ -383,6 +384,7 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 	{
 		let SetUniforms = function(Shader)
 		{
+			Shader.SetUniform('VertexRect', [0,0,1,1] );
 			Shader.SetUniform('Texture',VelocityTexture);
 		}
 		RenderTarget.DrawGeometry( Quad, CopyShader, SetUniforms );
@@ -394,6 +396,10 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 	{
 		let SetUniforms = function(Shader)
 		{
+			Shader.SetUniform('VertexRect', [0,0,1,1] );
+			Shader.SetUniform('PhysicsStep', 1.0/60.0 );
+			Shader.SetUniform('NoiseScale', 0.1 );
+			Shader.SetUniform('Gravity', -0.1);
 			Shader.SetUniform('Noise', RandomTexture);
 			Shader.SetUniform('LastVelocitys',ScratchTexture);
 			
@@ -408,6 +414,7 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 	{
 		let SetUniforms = function(Shader)
 		{
+			Shader.SetUniform('VertexRect', [0,0,1,1] );
 			Shader.SetUniform('Texture',PositionTexture);
 		}
 		RenderTarget.DrawGeometry( Quad, CopyShader, SetUniforms );
@@ -419,6 +426,8 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 	{
 		let SetUniforms = function(Shader)
 		{
+			Shader.SetUniform('VertexRect', [0,0,1,1] );
+			Shader.SetUniform('PhysicsStep', 1.0/60.0 );
 			Shader.SetUniform('Velocitys',Velocitys);
 			Shader.SetUniform('LastPositions',ScratchTexture);
 			
@@ -569,12 +578,16 @@ function RenderActor(RenderTarget,Actor,Time)
 	const TriangleBuffer = Actor.GetTriangleBuffer(RenderTarget);
 	const PositionsTexture = Actor.GetPositionsTexture();
 
-	Pop.Debug("CameraProjectionTransform",CameraProjectionTransform);
-	Pop.Debug("WorldToCameraTransform",WorldToCameraTransform);
-	Pop.Debug('LocalToWorldTransform', Actor.GetTransformMatrix() );
+	//Pop.Debug("CameraProjectionTransform",CameraProjectionTransform);
+	//Pop.Debug("WorldToCameraTransform",WorldToCameraTransform);
+	//Pop.Debug('LocalToWorldTransform', Actor.GetTransformMatrix() );
+	
+	const LocalPositions = [ -1,-1,0,	1,-1,0,	0,1,0	];
 	
 	let SetUniforms = function(Shader)
 	{
+		Shader.SetUniform('LocalPositions', LocalPositions );
+		
 		Shader.SetUniform('WorldPositions',PositionsTexture);
 		Shader.SetUniform('WorldPositionsWidth',PositionsTexture.GetWidth());
 		Shader.SetUniform('WorldPositionsHeight',PositionsTexture.GetHeight());
@@ -590,7 +603,9 @@ function RenderActor(RenderTarget,Actor,Time)
 		Shader.SetUniform('Fog_MaxDistance',Params.FogMaxDistance);
 		Shader.SetUniform('Fog_Colour',Params.FogColour);
 		Shader.SetUniform('Light_Colour', LightColour );
-		
+		Shader.SetUniform('Light_MinPower', 0.1 );
+		Shader.SetUniform('Light_MaxPower', 1.0 );
+
 		Timeline.EnumUniforms( Time, Shader.SetUniform.bind(Shader) );
 	};
 	

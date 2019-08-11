@@ -3,9 +3,9 @@ precision highp float;
 varying vec2 uv;
 uniform sampler2D LastVelocitys;
 uniform sampler2D Noise;
-uniform float PhysicsStep = 1.0/60.0;
-uniform float NoiseScale = 0.1;
-uniform float Gravity = -0.1;
+uniform float PhysicsStep;// = 1.0/60.0;
+uniform float NoiseScale;// = 0.1;
+uniform float Gravity;// = -0.1;
 
 
 /*
@@ -105,9 +105,9 @@ float3 GetTurbulenceNoise()
 
 float3 GetNoise(float2 uv)
 {
-	vec4 Noise4 = texture( Noise, uv );
+	vec4 Noise4 = texture2D( Noise, uv );
 	Noise4 -= 0.5;
-	Noise4 *= 2;
+	Noise4 *= 2.0;
 	Noise4 *= NoiseScale;
 	return Noise4.xyz;
 }

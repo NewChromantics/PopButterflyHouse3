@@ -23,9 +23,11 @@ uniform vec3 LocalPositions[3];/* = vec3[3](
 #define MAX_COLOUR_COUNT	16
 uniform int ColourCount;//= 0;
 uniform vec3 Colours[MAX_COLOUR_COUNT];
+uniform sampler2D ColourImage;
 
 uniform float TriangleScale;// = 0.06;
 
+//uniform bool BillboardTriangles = true;
 
 //	world space
 #define SphereRadius (TriangleScale * 0.5)
@@ -48,16 +50,18 @@ vec3 GetTriangleWorldPos(int TriangleIndex)
 	return xyz;
 }
 
-vec3 GetTriangleColour(int TriangleIndex)
+vec4 GetTriangleColour(int TriangleIndex)
 {
-	return vec3(1,0,0);
-	/*
-	if ( ColourCount == 0 )
-		return vec3(1,0,0);
+	float t = float(TriangleIndex);
 	
-	
-	return Colours[ TriangleIndex % ColourCount];
-	 */
+	//	index->uv
+	float x = mod( t, float(WorldPositionsWidth) );
+	float y = (t-x) / float(WorldPositionsWidth);
+	float u = x / float(WorldPositionsWidth);
+	float v = y / float(WorldPositionsHeight);
+	float Lod = 0.0;
+	float2 uv = float2(u,v);
+	return textureLod( ColourImage, uv, Lod );
 }
 
 void main()
@@ -74,7 +78,7 @@ void main()
 	float4 ProjectionPos = CameraProjectionTransform * CameraPos;
 	gl_Position = ProjectionPos;
 	
-	Rgba = float4( GetTriangleColour(TriangleIndex), 1 );
+	Rgba = GetTriangleColour(TriangleIndex);
 	TriangleUv = LocalPositions[VertexIndex].xy;
 	FragWorldPos = WorldPos.xyz;
 	Sphere4 = float4( TrianglePos, SphereRadius );

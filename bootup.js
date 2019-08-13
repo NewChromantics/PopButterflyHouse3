@@ -34,7 +34,7 @@ function GenerateRandomVertexes(OnVertex)
 	}
 }
 
-function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSkip=0,GetIndexMap=null)
+function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSkip=0,GetIndexMap=null,OnColourImage)
 {
 	let VertexSize = 2;
 	let VertexData = [];
@@ -46,6 +46,7 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 	let WorldPositionSize = 3;
 	let WorldMin = [null,null,null];
 	let WorldMax = [null,null,null];
+	let Colours = null;
 
 	let PushIndex = function(Index)
 	{
@@ -64,6 +65,19 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 		WorldPositions.push([x,y,z]);
 	}
 	
+	let BiggestAlpha = 0;
+	let ColourChannels = 0;
+	let PushColour = function(r,g,b,a=256)
+	{
+		BiggestAlpha = Math.max( a, BiggestAlpha );
+		if ( !Colours )
+			Colours = [];
+		Colours.push( r );
+		Colours.push( g );
+		Colours.push( b );
+		Colours.push( a );
+		ColourChannels = 4;
+	}
 
 	//	replace data with arrays... no noticable speed improvement!
 	let OnMeta = function(Meta)
@@ -118,7 +132,7 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 	
 	let TriangleCounter = 0;
 	let VertexCounter = 0;
-	let OnVertex = function(x,y,z)
+	let OnVertex = function(x,y,z,a,r,g,b)
 	{
 		if ( VertexCounter++ % (VertexSkip+1) > 0 )
 			return;
@@ -133,6 +147,8 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 		AddTriangle( TriangleCounter,x,y,z );
 		TriangleCounter++;
 		PushWorldPos( x,y,z );
+		if ( a !== undefined )
+			PushColour( r, g, b, Math.floor(a*256) );
 		/*
 		WorldMin[0] = Math.min( WorldMin[0], x );
 		WorldMin[1] = Math.min( WorldMin[1], y );
@@ -226,6 +242,21 @@ function LoadPlyGeometry(RenderTarget,Filename,WorldPositionImage,Scale,VertexSk
 		//let WriteTime = Pop.GetTimeNowMs();
 		WorldPositionImage.WritePixels( Width, Height, WorldPixels, 'Float'+Channels );
 		//Pop.Debug("Making world texture took", Pop.GetTimeNowMs()-WriteTime);
+		
+		if ( Colours )
+		{
+			let ColourPixels = new Uint8Array( Width * Height * ColourChannels );
+			let WriteColour = function(Component,Index)
+			{
+				ColourPixels[Index] = Component;
+			}
+			Colours.forEach( WriteColour );
+			let ColourImage = new Pop.Image();
+			const Formats = ['0','Greyscale','2','RGB','RGBA'];
+			const Format = Formats[ColourChannels];
+			ColourImage.WritePixels( Width, Height, ColourPixels, Format );
+			OnColourImage( ColourImage );
+		}
 	}
 	
 	const VertexAttributeName = "Vertex";
@@ -518,8 +549,13 @@ function TPhysicsActor(Meta)
 		if ( this.TriangleBuffer )
 			return this.TriangleBuffer;
 		
+		let OnColourImage = function(ColourImage)
+		{
+			this.Colours = ColourImage;
+		}
+		
 		this.PositionTexture = new Pop.Image();
-		this.TriangleBuffer = LoadPlyGeometry( RenderTarget, Meta.Filename, this.PositionTexture, Meta.Scale, Meta.VertexSkip, this.GetIndexMap.bind(this) );
+		this.TriangleBuffer = LoadPlyGeometry( RenderTarget, Meta.Filename, this.PositionTexture, Meta.Scale, Meta.VertexSkip, this.GetIndexMap.bind(this), OnColourImage.bind(this) );
 		this.ResetPhysicsTextures();
 		
 		return this.TriangleBuffer;
@@ -561,6 +597,7 @@ Params.FogMinDistance = 20;
 Params.FogMaxDistance = 40;
 Params.FogColour = FogColour;
 Params.TriangleScale = DebrisMeta.TriangleScale;
+Params.BillboardTriangles = true;
 
 let OnParamsChanged = function(Params)
 {
@@ -568,14 +605,14 @@ let OnParamsChanged = function(Params)
 	//Actor_Debris.Meta.TriangleScale = Params.Debris_TriangleScale;
 }
 
-const ParamsWindowSize = [10,10,200,100];
+const ParamsWindowSize = [10,10,400,150];
 const ParamsWindow = new CreateParamsWindow(Params,OnParamsChanged,ParamsWindowSize);
 ParamsWindow.AddParam('DebugPhysicsTextures');
 ParamsWindow.AddParam('FogMinDistance',0,30);
 ParamsWindow.AddParam('FogMaxDistance',0,30);
 ParamsWindow.AddParam('TriangleScale',0,0.2);
 ParamsWindow.AddParam('FogColour','Colour');
-
+ParamsWindow.AddParam('BillboardTriangles');
 
 function RenderActor(RenderTarget,Actor,Time)
 {
@@ -598,6 +635,8 @@ function RenderActor(RenderTarget,Actor,Time)
 	
 	const LocalPositions = [ -1,-1,0,	1,-1,0,	0,1,0	];
 	
+	const ColourImage = (Actor.Colours instanceof Pop.Image) ? Actor.Colours : null;
+	
 	let SetUniforms = function(Shader)
 	{
 		Shader.SetUniform('LocalPositions', LocalPositions );
@@ -608,7 +647,10 @@ function RenderActor(RenderTarget,Actor,Time)
 		
 		Shader.SetUniform('LocalToWorldTransform', Actor.GetTransformMatrix() );
 		Shader.SetUniform('TriangleScale', Actor.Meta.TriangleScale);
+		//Shader.SetUniform('BillboardTriangles', Params.BillboardTriangles );
 		
+		if ( ColourImage )
+			Shader.SetUniform('ColourImage',ColourImage);
 		Shader.SetUniform('Colours',Actor.Colours);
 		Shader.SetUniform('ColourCount',Actor.Colours.length/3);
 		Shader.SetUniform('WorldToCameraTransform', WorldToCameraTransform );

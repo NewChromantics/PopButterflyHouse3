@@ -647,7 +647,7 @@ function RenderActor(RenderTarget,Actor,Time)
 		
 		Shader.SetUniform('LocalToWorldTransform', Actor.GetTransformMatrix() );
 		Shader.SetUniform('TriangleScale', Actor.Meta.TriangleScale);
-		//Shader.SetUniform('BillboardTriangles', Params.BillboardTriangles );
+		Shader.SetUniform('BillboardTriangles', Params.BillboardTriangles );
 		
 		if ( ColourImage )
 			Shader.SetUniform('ColourImage',ColourImage);

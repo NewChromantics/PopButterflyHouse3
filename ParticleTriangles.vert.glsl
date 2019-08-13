@@ -27,7 +27,7 @@ uniform sampler2D ColourImage;
 
 uniform float TriangleScale;// = 0.06;
 
-//uniform bool BillboardTriangles = true;
+uniform bool BillboardTriangles = true;
 
 //	world space
 #define SphereRadius (TriangleScale * 0.5)
@@ -69,18 +69,24 @@ void main()
 	int VertexIndex = int(Vertex.x);
 	int TriangleIndex = int(Vertex.y);
 	
-	float3 LocalPos = LocalPositions[VertexIndex] * TriangleScale;
-	float3 TrianglePos = GetTriangleWorldPos(TriangleIndex);
+	float3 VertexPos = LocalPositions[VertexIndex] * TriangleScale;
+	float3 LocalPos = VertexPos;
+	if ( BillboardTriangles )
+		LocalPos = float3(0,0,0);
+	
+	float3 TriangleWorldPos = GetTriangleWorldPos(TriangleIndex);
 	float4 WorldPos = LocalToWorldTransform * float4(LocalPos,1);
-	WorldPos.xyz += TrianglePos;
+	WorldPos.xyz += TriangleWorldPos;
 	WorldPos.w = 1.0;
 	float4 CameraPos = WorldToCameraTransform * WorldPos;
+	if ( BillboardTriangles )
+		CameraPos.xyz += VertexPos;
 	float4 ProjectionPos = CameraProjectionTransform * CameraPos;
 	gl_Position = ProjectionPos;
 	
 	Rgba = GetTriangleColour(TriangleIndex);
 	TriangleUv = LocalPositions[VertexIndex].xy;
-	FragWorldPos = WorldPos.xyz;
-	Sphere4 = float4( TrianglePos, SphereRadius );
+	FragWorldPos = WorldPos.xyz + VertexPos;
+	Sphere4 = float4( TriangleWorldPos, SphereRadius );
 }
 

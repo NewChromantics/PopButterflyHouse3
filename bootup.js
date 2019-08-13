@@ -380,6 +380,7 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 	let UpdateVelocityShader = Pop.GetShader( RenderTarget, ParticlePhysicsIteration_UpdateVelocity, QuadVertShader );
 	let UpdatePositionsShader = Pop.GetShader( RenderTarget, ParticlePhysicsIteration_UpdatePosition, QuadVertShader );
 	let Quad = GetQuadGeometry(RenderTarget);
+	const PhysicsStep = (Time < 5) ? 0 : 1.0/60.0;
 
 	//	copy old velocitys
 	let CopyVelcoityToScratch = function(RenderTarget)
@@ -399,7 +400,7 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 		let SetUniforms = function(Shader)
 		{
 			Shader.SetUniform('VertexRect', [0,0,1,1] );
-			Shader.SetUniform('PhysicsStep', 1.0/60.0 );
+			Shader.SetUniform('PhysicsStep',PhysicsStep );
 			Shader.SetUniform('NoiseScale', 0.1 );
 			Shader.SetUniform('Gravity', -0.1);
 			Shader.SetUniform('Noise', RandomTexture);
@@ -429,7 +430,7 @@ function PhysicsIteration(RenderTarget,Time,PositionTexture,VelocityTexture,Scra
 		let SetUniforms = function(Shader)
 		{
 			Shader.SetUniform('VertexRect', [0,0,1,1] );
-			Shader.SetUniform('PhysicsStep', 1.0/60.0 );
+			Shader.SetUniform('PhysicsStep', PhysicsStep );
 			Shader.SetUniform('Velocitys',VelocityTexture);
 			Shader.SetUniform('LastPositions',ScratchTexture);
 			
@@ -541,10 +542,10 @@ const Timeline = new TTimeline( Keyframes );
 
 
 let DebrisMeta = {};
-DebrisMeta.Filename = '.random';
+DebrisMeta.Filename = 'shell_v001.ply';
 DebrisMeta.Position = [0,0,0];
-DebrisMeta.Scale = 1;
-DebrisMeta.TriangleScale = 0.10;
+DebrisMeta.Scale = 2;
+DebrisMeta.TriangleScale = 0.03;
 DebrisMeta.Colours = DebrisColours;
 DebrisMeta.VertexSkip = 0;
 
@@ -567,7 +568,8 @@ let OnParamsChanged = function(Params)
 	//Actor_Debris.Meta.TriangleScale = Params.Debris_TriangleScale;
 }
 
-let ParamsWindow = new CreateParamsWindow(Params,OnParamsChanged);
+const ParamsWindowSize = [10,10,200,100];
+const ParamsWindow = new CreateParamsWindow(Params,OnParamsChanged,ParamsWindowSize);
 ParamsWindow.AddParam('DebugPhysicsTextures');
 ParamsWindow.AddParam('FogMinDistance',0,30);
 ParamsWindow.AddParam('FogMaxDistance',0,30);
@@ -667,13 +669,16 @@ Window.OnRender = Render;
 
 Window.OnMouseDown = function(x,y,Button)
 {
-	Camera.OnCameraOrbit( x, y, 0, true );
+	Window.OnMouseMove( x, y, Button, true );
 }
 
-Window.OnMouseMove = function(x,y,Button)
+Window.OnMouseMove = function(x,y,Button,FirstDown)
 {
-	//	gr: we should change Button to undefined, not -1
-	if ( Button >= 0 && Button !== undefined )
-		Camera.OnCameraOrbit( x, y, 0, false );
+	if ( Button == 1 )
+		Camera.OnCameraOrbit( x, y, 0, FirstDown );
+	if ( Button == 2 )
+		Camera.OnCameraPan( x, y, 0, FirstDown );
+	if ( Button == 0 )
+		Camera.OnCameraPan( x, 0, y, FirstDown );
 };
 
